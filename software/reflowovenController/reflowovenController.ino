@@ -87,8 +87,8 @@ struct MyObject {
 
 //デフォルト設定
 MyObject setting_eeprom = {
-  {160, 140, 160, 150},
-  {70, 60, 120, 60},
+  {160, 140, 160, 140},
+  {70, 60, 120, 30},
   {220, 180, 240, 200},
   {20, 30, 60, 30},
   10, 3,
@@ -106,9 +106,9 @@ uint32_t u32num = 0;
 //uint8_t number = 0;
 
 //プロファイル用データ
-uint32_t preheatTemperature = 160 ;
-uint32_t preheatTime = 70 ; /* sec */
-uint32_t heatTemperature = 220 ;
+uint32_t preheatTemperature = 140 ;
+uint32_t preheatTime = 30 ; /* sec */
+uint32_t heatTemperature = 200 ;
 uint32_t heatTime = 20; /* sec */
 double currentTemperature;
 //カウントダウン用
@@ -337,7 +337,7 @@ void loop() {
 int load_eeprom(int num) {
   float eeprom_key ; //eeprom check key
   EEPROM.get( 0, eeprom_key );
-  if (eeprom_key == 654.321f) {
+  if (eeprom_key == 653.321f) {
     int eeAddress = sizeof(float);
     EEPROM.get( eeAddress, setting_eeprom);
     preheatTemperature = setting_eeprom.preheatTemperature[num] ;
@@ -355,7 +355,7 @@ int load_eeprom(int num) {
 
 //EEPROM SAVE LOAD
 int save_eeprom(int num) {
-  float eeprom_key = 654.321f;
+  float eeprom_key = 653.321f;
   EEPROM.put( 0, eeprom_key );
   setting_eeprom.preheatTemperature[num] = preheatTemperature ;
   setting_eeprom.preheatTime[num] = preheatTime ; /* sec */
@@ -469,9 +469,10 @@ void reflowMain() {
         }
         break;
       case PREHEAT: // keep preheat time. main logic is countDown()
-
+ char str[32]; char temp[8];
 
         keepHeat(currentTemperature);
+ 
         break;
       case RISE_FOR_PEAK_SETUP:
         SetPoint = heatTemperature;
@@ -489,6 +490,7 @@ void reflowMain() {
         break;
       case PEAK:
         keepHeat(currentTemperature);
+ 
         break;
       case COOLDOWN: //
 
@@ -514,6 +516,39 @@ void reflowMain() {
         break;
 
     }
+     lcd.setCursor(0, 0);
+ char str[32]; char temp[8];
+  sprintf(str, " %s%-2u", "STATE:", STATE);
+  lcd.print(str);
+  lcd.setCursor(0, 1);
+  sprintf(str, "%s%s", dtostrf(currentTemperature, 5, 2, temp), "C");
+  lcd.print(str); lcd.print((char)223);
+  sprintf(str, "/%s%s", dtostrf(SetPoint, 5, 2, temp), "C");
+  lcd.print(str); lcd.print((char)223);
+ switch (STATE) {
+    case PREHEAT:
+      lcd.setCursor(10, 0);
+      sprintf(str, "%s%s", dtostrf(preheatTimeC, 3, 0, temp), "s");
+      lcd.print(str);
+            if (preheatTimeC <= 0) {
+       lcd.setCursor(10, 0);
+       lcd.print(F("      "));
+      }
+
+      break;
+    case PEAK:
+      lcd.setCursor(10, 0);
+      sprintf(str, "%s%s", dtostrf(heatTimeC, 3, 0, temp), "s");
+      lcd.print(str);
+      break;
+            if (heatTimeC <= 0) {
+       lcd.setCursor(10, 0);
+       lcd.print(F("      "));
+      }
+
+  }
+delay(50);
+
     //    char str[32];
     //    char temp[16];
     //    char temp2[16];
@@ -532,6 +567,9 @@ void reflowMain() {
   } while ( STATE != 0);
 
 
+}
+void lcdtest(){
+  
 }
 double getTemperature()
 {
@@ -618,45 +656,20 @@ void delayWDT_setup(unsigned int ii) {  // ウォッチドッグタイマーを�
 ISR(WDT_vect) {                         // WDTがタイムアップした時に実行される処理
   // wdt_Cycle++;                        // 必要ならコメントアウトを外す
 
-  char str[32]; char temp[8];
-
-
-
-  //  dtostrf(myPID.GetKp(), 5, 0, temp)
-  //  dtostrf(myPID.GetKi(), 5,0, temp)
-  //  dtostrf(myPID.GetKd(), 5, 0, temp)
-
-  lcd.setCursor(0, 0);
-
-  sprintf(str, " %s%-2u", "STATE:", STATE);
-  lcd.print(str);
-  lcd.setCursor(0, 1);
-  sprintf(str, "%s%s", dtostrf(currentTemperature, 5, 2, temp), "C");
-  lcd.print(str); lcd.print((char)223);
-  sprintf(str, "/%s%s", dtostrf(SetPoint, 5, 2, temp), "C");
-  lcd.print(str); lcd.print((char)223);
+ 
 
   switch (STATE) {
     case PREHEAT:
-      lcd.setCursor(10, 0);
-      sprintf(str, "%s%s", dtostrf(preheatTimeC, 3, 0, temp), "s");
-      lcd.print(str);
+
 
       if (preheatTimeC <= 0) {
-        lcd.setCursor(10, 0);
-        lcd.print(F("      "));
         STATE++;
       }
       preheatTimeC--;
 
       break;
     case PEAK:
-      lcd.setCursor(10, 0);
-      sprintf(str, "%s%s", dtostrf(heatTimeC, 3, 0, temp), "s");
-      lcd.print(str);
-      if (heatTimeC <= 0) {
-        lcd.setCursor(10, 0);
-        lcd.print(F("      "));
+     if (heatTimeC <= 0) {
         STATE++;
       }
       heatTimeC--;
